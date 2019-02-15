@@ -18,7 +18,8 @@
 
 package org.wso2.carbon.connector;
 
-import org.apache.commons.codec.binary.Base64;
+//import org.apache.commons.codec.binary.Base64;
+import java.util.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.synapse.MessageContext;
@@ -51,6 +52,7 @@ public class CreateJWT extends AbstractConnector {
     public void connect(MessageContext messageContext) {
         try {
             String token = getJsonWebToken(messageContext);
+            System.out.println("Token ############# " + token);
             messageContext.setProperty(JWTConstant.JWT_PROP, token);
 
         } catch (IOException | InvalidKeyException | SignatureException |
@@ -142,7 +144,7 @@ public class CreateJWT extends AbstractConnector {
 
         byte[] encodedHeader = new byte[0];
         if (jwtHeaderStr != null) {
-            encodedHeader = Base64.encodeBase64(jwtHeaderStr.getBytes(JWTConstant.UTF));
+            encodedHeader = Base64.getEncoder().encode(jwtHeaderStr.getBytes(JWTConstant.UTF));
         }
 
         //Construct JWT Claim
@@ -150,6 +152,7 @@ public class CreateJWT extends AbstractConnector {
         long iat = (System.currentTimeMillis() / 1000) - 60;
         long exp = iat + 3600;
         try {
+            jwtClaimSet.put("sub", "service-account-bq-streaming@dataservices-non-prod.iam.gserviceaccount.com");
             jwtClaimSet.put(JWTConstant.JWT_CLAIMSET_ISS, serviceAccount);
             jwtClaimSet.put(JWTConstant.SCOPE, scope);
             jwtClaimSet.put(JWTConstant.JWT_CLAIMSET_AUD, JWTConstant.TOKEN_ENDPOINT);
@@ -162,7 +165,7 @@ public class CreateJWT extends AbstractConnector {
 
         byte[] encodedClaimSet = new byte[0];
         if (jwtClaimStr != null) {
-            encodedClaimSet = Base64.encodeBase64(jwtClaimStr.getBytes(JWTConstant.UTF));
+            encodedClaimSet = Base64.getEncoder().encode(jwtClaimStr.getBytes(JWTConstant.UTF));
         }
 
         StringBuilder token = new StringBuilder();
@@ -173,9 +176,9 @@ public class CreateJWT extends AbstractConnector {
             //Create JWT SIGNATURE
             privateKey = getPrivateKey(keyStoreLocation, password);
             byte[] sig = signData(token.toString().getBytes(JWTConstant.UTF), privateKey);
-            byte[] encodedSig = Base64.encodeBase64(sig);
+//            byte[] encodedSig = Base64.encodeBase64(sig);
             token.append(".");
-            token.append(new String(encodedSig));
+            token.append(new String(Base64.getUrlEncoder().encode(sig), JWTConstant.UTF));
         } catch (IOException | InvalidKeyException | SignatureException | NoSuchAlgorithmException |
                 KeyStoreException | UnrecoverableKeyException | CertificateException e) {
             throw new SynapseException(e.getMessage(), e);
